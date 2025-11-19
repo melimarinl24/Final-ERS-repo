@@ -1,51 +1,146 @@
 {% extends "layout.html" %}
 {% block content %}
-<main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
-  <h1>Your Scheduled Exams</h1>
 
-  {% if exams and exams|length > 0 %}
-    <table role="grid" style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th>Exam</th>
-          <th>Date</th>
-          <th>Location</th>
-          <th>Status</th>
-          <th style="text-align:center;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for exam in exams %}
-        <tr>
-          <td>{{ exam.exam_name }}</td>
-          <td>{{ exam.exam_date }}</td>
-          <td>{{ exam.exam_location }}</td>
-          <td>{{ exam.status }}</td>
-          <td style="text-align:center;">
-            {% if exam.status|lower != 'cancelled' %}
-                <!-- Cancel Exam -->
-                <form method="POST" action="{{ url_for('student_exam_bp.cancel_exam', exam_id=exam.exam_id) }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
-                <button type="submit" class="secondary">Cancel</button>
-                </form>
+<style>
+.appointments-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+}
 
-                <!-- Reschedule Exam -->
-                <form method="POST" action="{{ url_for('student_exam_bp.reschedule_exam', exam_id=exam.exam_id) }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
-                <input type="date" name="new_date" required>
-                <input type="time" name="new_time" required>
-                <button type="submit">Reschedule</button>
-                </form>
-            {% else %}
-              —
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+.appointments-table th {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+}
+
+.appointments-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Consistent column widths */
+.appointments-table th:nth-child(1),
+.appointments-table td:nth-child(1) {
+    width: 120px;   /* Confirmation */
+}
+
+.appointments-table th:nth-child(2),
+.appointments-table td:nth-child(2) {
+    width: 90px;    /* Course */
+}
+
+.appointments-table th:nth-child(3),
+.appointments-table td:nth-child(3) {
+    width: 110px;   /* Exam */
+}
+
+.appointments-table th:nth-child(4),
+.appointments-table td:nth-child(4) {
+    width: 140px;   /* Professor */
+}
+
+.appointments-table th:nth-child(5),
+.appointments-table td:nth-child(5),
+.appointments-table th:nth-child(6),
+.appointments-table td:nth-child(6) {
+    width: 100px;   /* Date + Time */
+    text-align: center;
+}
+
+/* Status formatting */
+.status-active {
+    color: green;
+    font-weight: 600;
+}
+
+.status-canceled {
+    color: #b00;
+    font-weight: 600;
+}
+
+/* Action buttons */
+.actions-col {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.actions-col button {
+    margin: 0 3px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+}
+</style>
+
+
+<main class="container" style="max-width:900px; margin:40px auto; padding:18px;">
+  <h1>My Appointments</h1>
+
+  <!-- Filters -->
+  <form method="get" action="{{ url_for('student_ui.student_appointments') }}"
+        style="margin: 1rem 0; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <input type="search" name="q" placeholder="Search exam or course"
+           value="{{ q or '' }}">
+
+    <input type="date" name="start" value="{{ start or '' }}">
+    <input type="date" name="end" value="{{ end or '' }}">
+
+    <button type="submit">Filter</button>
+    <a href="{{ url_for('student_ui.student_appointments') }}" class="secondary">Reset</a>
+  </form>
+
+  {% if bookings and bookings|length > 0 %}
+
+  <table role="grid" class="appointments-table">
+    <thead>
+      <tr>
+        <th>Confirmation</th>
+        <th>Course</th>
+        <th>Exam</th>
+        <th>Professor</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th style="text-align:center;">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td>{{ b.confirmation_code }}</td>
+        <td>{{ b.course_code }}</td>
+        <td>{{ b.exam_type }}</td>
+        <td>{{ b.professor_name }}</td>
+        <td>{{ b.exam_date }}</td>
+        <td>{{ b.exam_time or '—' }}</td>
+        <td>{{ b.location }}</td>
+        <td>
+          {% if b.status == 'Active' %}
+          <span class="status-active">Active</span>
+          {% else %}
+          <span class="status-canceled">Canceled</span>
+          {% endif %}
+        </td>
+        <td class="actions-col">
+          <button class="secondary" onclick="alert('Cancel coming soon!')">Cancel</button>
+          <button onclick="alert('Reschedule coming soon!')">Reschedule</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+
+
+
+
   {% else %}
-    <p>No scheduled exams yet.</p>
+    <p>No appointments found.</p>
   {% endif %}
 </main>
+
 {% endblock %}

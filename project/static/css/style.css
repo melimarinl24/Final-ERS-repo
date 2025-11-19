@@ -547,3 +547,27 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
   color: #0a7a0a;
   border-left: 4px solid #0f9c0f;
 }
+
+
+.flash-container { margin: 15px 0; }
+.flash {
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+.flash-error {
+  background: #ffdddd;
+  color: #a00000;
+  border-left: 4px solid #a00000;
+}
+.flash-warning {
+  background: #fff3cd;
+  color: #8a6d00;
+  border-left: 4px solid #8a6d00;
+}
+.flash-message, .flash-success {
+  background: #ddffdd;
+  color: #006600;
+  border-left: 4px solid #006600;
+}

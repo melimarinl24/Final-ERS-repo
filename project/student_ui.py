@@ -24,7 +24,6 @@ def get_timeslot_label(timeslot_id):
     except (TypeError, ValueError):
         return None, None
 
-    # 1 => 8, 2 => 9, ...
     hour = 8 + (tid - 1)
     if hour < 8 or hour > 16:
         return None, None
@@ -43,6 +42,7 @@ def student_dashboard():
     return render_template("student_dashboard.html")
 
 
+
 # ==========================================================
 # EXAM SCHEDULING (STEP 1: FORM + REVIEW PAGE)
 # ==========================================================
@@ -58,39 +58,46 @@ def student_exams():
         ORDER BY name
     """)).mappings().all()
 
-    # 2) Exams (with capacity and seats used)
+    # 2) Exams PER LOCATION using exam_locations
     raw = db.session.execute(text("""
         SELECT 
-            e.id   AS exam_id,
+            e.id          AS exam_id,
             e.exam_type,
             e.exam_date,
-            u.name AS professor_name,
-            e.capacity,
+            u.name        AS professor_name,
+            el.location_id,
+            el.capacity,
             (
                 SELECT COUNT(*)
                 FROM registrations r
                 WHERE r.exam_id = e.id
+                  AND r.location_id = el.location_id
                   AND r.status = 'Active'
             ) AS used_seats
-        FROM exams e
-        JOIN professors p ON e.professor_id = p.id
-        JOIN users u ON p.user_id = u.id
-        ORDER BY e.exam_date ASC, u.name ASC
+        FROM exam_locations el
+        JOIN exams e       ON el.exam_id = e.id
+        JOIN professors p  ON e.professor_id = p.id
+        JOIN users u       ON p.user_id = u.id
+        ORDER BY e.exam_date ASC, u.name ASC, el.location_id ASC
     """)).mappings().all()
 
-    exams = [
-        {
-            "exam_id":       r["exam_id"],
-            "exam_type":     r["exam_type"],
-            "exam_date":     r["exam_date"].strftime("%Y-%m-%d"),
+    # Shape into Python dicts + compute remaining per LOCATION
+    exams = []
+    for r in raw:
+        remaining = r["capacity"] - r["used_seats"]
+        if remaining <= 0:
+            continue  # hide full sessions
+
+        exams.append({
+            "exam_id":        r["exam_id"],
+            "exam_type":      r["exam_type"],
+            "exam_date":      r["exam_date"].strftime("%Y-%m-%d"),
             "professor_name": r["professor_name"],
-            "capacity":      r["capacity"],
-            "used_seats":    r["used_seats"],
-            "remaining":     r["capacity"] - r["used_seats"]
-        }
-        for r in raw
-        if r["capacity"] - r["used_seats"] > 0
-    ]
+            "location_id":    r["location_id"],
+            "capacity":       r["capacity"],
+            "used_seats":     r["used_seats"],
+            "remaining":      remaining,
+        })
 
     # 3) Time slots (in-memory)
     timeslots = [
@@ -103,6 +110,7 @@ def student_exams():
 
     # ------------------------------------------------------
     # POST: Validate + go to review_before_confirm.html
+    # (this part stays exactly like you had it before)
     # ------------------------------------------------------
     if request.method == "POST":
         exam_id = request.form.get("exam_id")
@@ -114,7 +122,7 @@ def student_exams():
             flash("Please complete all fields.", "error")
             return redirect(url_for("student_ui.student_exams"))
 
-        # 1) Limit: max 3 active registrations
+        # Limit: max 3 active registrations
         active_count = db.session.execute(text("""
             SELECT COUNT(*)
             FROM registrations
@@ -126,7 +134,7 @@ def student_exams():
             flash("You cannot have more than 3 active appointments.", "error")
             return redirect(url_for("student_ui.student_exams"))
 
-        # 2) Duplicate: same exam_id already active for this user
+        # No duplicate exam for this user (same exam_id)
         duplicate = db.session.execute(text("""
             SELECT 1
             FROM registrations r
@@ -139,7 +147,7 @@ def student_exams():
             flash("You already registered for this exam.", "error")
             return redirect(url_for("student_ui.student_exams"))
 
-        # 3) Load exam info for review page
+        # Load exam info for review page
         exam_info = db.session.execute(text("""
             SELECT 
                 e.exam_type AS exam_title,
@@ -157,21 +165,21 @@ def student_exams():
             flash("Could not load exam details.", "error")
             return redirect(url_for("student_ui.student_exams"))
 
+        # Use your existing helper
         start_time, end_time = get_timeslot_label(time_id)
 
         info = {
-            "exam_title":       exam_info["exam_title"],
-            "exam_date":        exam_info["exam_date"],
-            "professor_name":   exam_info["professor_name"],
-            "location":         exam_info["location"],
-            "start_time":       start_time,
-            "end_time":         end_time,
-            "selected_exam":    exam_id,
-            "selected_loc":     loc_id,
+            "exam_title":        exam_info["exam_title"],
+            "exam_date":         exam_info["exam_date"],
+            "professor_name":    exam_info["professor_name"],
+            "location":          exam_info["location"],
+            "start_time":        start_time,
+            "end_time":          end_time,
+            "selected_exam":     exam_id,
+            "selected_loc":      loc_id,
             "selected_timeslot": time_id,
         }
 
-        # Show the "Please confirm this info" page
         return render_template("review_before_confirm.html", info=info)
 
     # GET: Show the scheduling form
@@ -186,125 +194,187 @@ def student_exams():
     )
 
 
+
+
+
+
 # ==========================================================
 # STEP 2 – FINAL CONFIRM (INSERT + SUCCESS PAGE)
 # ==========================================================
 @student_ui.route("/confirm-final", methods=["POST"])
 @login_required
 def confirm_final():
-    exam_id = request.form.get("exam_id")
-    loc_id  = request.form.get("location_id")
-    time_id = request.form.get("timeslot_id")
+    user_id     = current_user.id
+    exam_id     = request.form.get("exam_id")
+    timeslot_id = request.form.get("timeslot_id")
+    location_id = request.form.get("location_id")
 
-    if not (exam_id and loc_id and time_id):
-        flash("Invalid confirmation data.", "error")
+    # ----------------------------------------
+    # 1) Validate incoming data
+    # ----------------------------------------
+    if not exam_id or not timeslot_id or not location_id:
+        flash("Missing required appointment information.", "error")
         return redirect(url_for("student_ui.student_exams"))
 
-    # 1) Insert the registration
-    db.session.execute(text("""
-        INSERT INTO registrations
-            (user_id, exam_id, timeslot_id, location_id, registration_date, status)
-        VALUES
-            (:u, :e, :t, :l, NOW(), 'Active')
-    """), {
-        "u": current_user.id,
-        "e": exam_id,
-        "t": time_id,
-        "l": loc_id
-    })
-    db.session.commit()
+    # ----------------------------------------
+    # 2) Prevent booking same exam twice
+    # ----------------------------------------
+    dup_check = db.session.execute(text("""
+        SELECT id FROM registrations
+        WHERE user_id = :u AND exam_id = :e AND status = 'Active'
+    """), {"u": user_id, "e": exam_id}).fetchone()
 
-    # 2) Get the most recent registration for this user (the one we just inserted)
-    reg = db.session.execute(text("""
-        SELECT
-            r.id,
-            r.registration_id,
-            r.timeslot_id,
-            e.exam_type AS exam_title,
-            e.exam_date,
-            u.name      AS professor_name,
-            l.name      AS location
-        FROM registrations r
-        JOIN exams e      ON e.id = r.exam_id
-        JOIN professors p ON e.professor_id = p.id
-        JOIN users u      ON p.user_id = u.id
-        JOIN locations l  ON l.id = r.location_id
-        WHERE r.user_id = :u
-        ORDER BY r.id DESC
-        LIMIT 1
-    """), {"u": current_user.id}).mappings().first()
+    if dup_check:
+        flash("You are already registered for this exam.", "error")
+        return redirect(url_for("student_ui.student_exams"))
 
-    if not reg:
-        flash("Registration saved, but could not load confirmation details.", "warning")
-        return redirect(url_for("student_ui.student_dashboard"))
+    # ----------------------------------------
+    # 3) Prevent more than 3 active appointments
+    # ----------------------------------------
+    reg_count = db.session.execute(text("""
+        SELECT COUNT(*) AS count
+        FROM registrations
+        WHERE user_id = :u AND status = 'Active'
+    """), {"u": user_id}).mappings().first()["count"]
 
-    # 3) Ensure we have a registration_id in format CSN###
-    reg_id = reg["registration_id"]
-    if not reg_id:  # if null or empty, generate
-        reg_id = f"CSN{reg['id']:03d}"
+    if reg_count >= 3:
+        flash("You cannot book more than 3 exams.", "error")
+        return redirect(url_for("student_ui.student_exams"))
+
+    # ----------------------------------------
+    # 4) Generate UNIQUE registration_id (CSN###)
+    # ----------------------------------------
+    row = db.session.execute(text("""
+        SELECT MAX(CAST(SUBSTRING(registration_id, 4) AS UNSIGNED)) AS max_num
+        FROM registrations
+        WHERE registration_id LIKE 'CSN%%'
+    """)).mappings().first()
+
+    max_num = row["max_num"] or 0
+    new_reg_id = f"CSN{max_num + 1:03d}"
+
+    # ----------------------------------------
+    # 5) Insert new appointment
+    # ----------------------------------------
+    try:
         db.session.execute(text("""
-            UPDATE registrations
-            SET registration_id = :rid
-            WHERE id = :id
-        """), {"rid": reg_id, "id": reg["id"]})
+            INSERT INTO registrations
+                (registration_id, user_id, exam_id, timeslot_id, location_id, registration_date, status)
+            VALUES
+                (:rid, :u, :e, :t, :l, NOW(), 'Active')
+        """), {
+            "rid": new_reg_id,
+            "u": user_id,
+            "e": exam_id,
+            "t": timeslot_id,
+            "l": location_id
+        })
+
         db.session.commit()
 
-    # 4) Convert timeslot to human readable
-    start_time, end_time = get_timeslot_label(reg["timeslot_id"])
+    except Exception as e:
+        db.session.rollback()
+        print("ERROR inserting registration:", e)
+        flash("An unexpected error occurred while booking your appointment.", "error")
+        return redirect(url_for("student_ui.student_exams"))
+
+    # ----------------------------------------
+    # 6) Pull back details for the success page
+    # ----------------------------------------
+    reg = db.session.execute(text("""
+        SELECT r.registration_id,
+               e.exam_type AS exam_title,
+               e.exam_date,
+               u.name AS professor_name,
+               l.name AS location,
+               ts.start_time,
+               ts.end_time
+        FROM registrations r
+        JOIN exams e      ON e.id = r.exam_id
+        JOIN professors p ON p.id = e.professor_id
+        JOIN users u      ON u.id = p.user_id
+        JOIN locations l  ON l.id = r.location_id
+        JOIN timeslots ts ON ts.id = r.timeslot_id
+        WHERE r.registration_id = :rid
+    """), {"rid": new_reg_id}).mappings().first()
 
     info = {
-        "confirmation_code": reg_id,
+        "confirmation_code": reg["registration_id"],
         "exam_title":        reg["exam_title"],
         "exam_date":         reg["exam_date"],
         "professor_name":    reg["professor_name"],
         "location":          reg["location"],
-        "start_time":        start_time,
-        "end_time":          end_time,
+        "start_time":        reg["start_time"],
+        "end_time":          reg["end_time"],
     }
 
-    # Final success page with confirmation code + details
     return render_template("confirm_success.html", info=info)
 
 
 # ==========================================================
-# MY APPOINTMENTS
+# STUDENT — VIEW MY APPOINTMENTS
 # ==========================================================
 @student_ui.route("/appointments")
 @login_required
 def student_appointments():
-    try:
-        rows = db.session.execute(text("""
-            SELECT
-                r.id            AS reg_id,
-                r.registration_id AS confirmation_code,
-                r.timeslot_id,
-                e.exam_type,
-                e.exam_date,
-                l.name          AS location,
-                r.status
-            FROM registrations r
-            JOIN exams e      ON e.id = r.exam_id
-            LEFT JOIN locations l ON l.id = r.location_id
-            WHERE r.user_id = :sid
-            ORDER BY e.exam_date DESC
-        """), {"sid": current_user.id}).mappings().all()
+    q     = (request.args.get("q") or "").strip()
+    start = (request.args.get("start") or "").strip()
+    end   = (request.args.get("end") or "").strip()
 
-        # Attach readable time ranges
-        for r in rows:
-            if r["timeslot_id"]:
-                start, end = get_timeslot_label(r["timeslot_id"])
-                r["start_time"] = start
-                r["end_time"] = end
-            else:
-                r["start_time"] = None
-                r["end_time"] = None
+    # Dynamic parts
+    name_filter  = ""
+    start_filter = ""
+    end_filter   = ""
 
-        today = date.today()
-        upcoming = [r for r in rows if r["exam_date"] >= today]
-        past     = [r for r in rows if r["exam_date"] < today]
+    params = {"sid": current_user.id}
 
-        return render_template("appointments.html", upcoming=upcoming, past=past)
+    if q:
+        name_filter = " AND (c.course_code LIKE :like OR e.exam_type LIKE :like)"
+        params["like"] = f"%{q}%"
 
-    except Exception as e:
-        print("❌ Error loading appointments:", e)
-        return render_template("appointments.html", upcoming=[], past=[])
+    if start:
+        start_filter = " AND e.exam_date >= :start"
+        params["start"] = start
+
+    if end:
+        end_filter = " AND e.exam_date <= :end"
+        params["end"] = end
+
+    # FINAL SQL (only ONE ORDER BY)
+    base_sql = f"""
+        SELECT
+            r.id              AS reg_id,
+            r.registration_id AS confirmation_code,
+            r.status          AS status,
+
+            e.id              AS exam_id,
+            e.exam_type       AS exam_type,
+            e.exam_date       AS exam_date,
+
+            ts.start_time     AS exam_time,
+
+            c.course_code     AS course_code,
+            l.name            AS location,
+            u.name            AS professor_name
+        FROM registrations r
+        JOIN exams e        ON e.id = r.exam_id
+        JOIN timeslots ts   ON ts.id = r.timeslot_id
+        JOIN courses c      ON c.id = e.course_id
+        JOIN locations l    ON l.id = r.location_id
+        JOIN professors p   ON p.id = e.professor_id
+        JOIN users u        ON u.id = p.user_id
+        WHERE r.user_id = :sid
+        {name_filter}
+        {start_filter}
+        {end_filter}
+        ORDER BY e.exam_date DESC, ts.start_time DESC
+    """
+
+    rows = db.session.execute(text(base_sql), params).mappings().all()
+    bookings = [dict(r) for r in rows]
+
+    return render_template(
+        "appointments.html",
+        bookings=bookings,
+        q=q, start=start, end=end
+    )

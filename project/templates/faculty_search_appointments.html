@@ -1,43 +1,107 @@
 {% extends "layout.html" %}
 {% block content %}
-<main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
-  <h1>Search Appointments</h1>
 
-  <form method="POST" style="margin-bottom:24px; display:flex; gap:0.5rem; align-items:center;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
-    <input type="text" name="search_term"
-           placeholder="Enter student name, exam name, or exam ID"
-           aria-label="Search term"
-           required
-           style="flex:1; padding:0.5rem;">
-    <button type="submit" class="btn btn-primary-blue">Search</button>
-  </form>
+<style>
+.faculty-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+}
 
-  {% if results %}
-    <table role="grid" style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr style="background:#f7f7f7;">
-          <th>Exam</th>
-          <th>Date</th>
-          <th>Location</th>
-          <th>Status</th>
-          <th>Student</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in results %}
-          <tr>
-            <td>{{ row.exam_name }}</td>
-            <td>{{ row.exam_date }}</td>
-            <td>{{ row.exam_location }}</td>
-            <td>{{ row.status }}</td>
-            <td>{{ row.first_name }} {{ row.last_name }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
+.faculty-table th {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+}
+
+.faculty-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.status-active { color: green; font-weight: 600; }
+.status-canceled { color: #b00; font-weight: 600; }
+
+.actions-col {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.actions-col button {
+    margin: 0 3px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+}
+</style>
+
+
+<main class="container" style="max-width:900px; margin:40px auto; padding:18px;">
+    <h1>Search Appointments</h1>
+
+    <form method="POST" style="margin-bottom:24px; display:flex; gap:0.5rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
+
+        <input type="text" name="search_term"
+               value="{{ search_term }}"
+               placeholder="Search student, exam, course, or confirmation code"
+               style="flex:1; padding:0.5rem;">
+
+        <button type="submit" class="btn btn-primary-blue">Search</button>
+    </form>
+
+
+    {% if results %}
+    <table class="faculty-table" role="grid">
+        <thead>
+            <tr>
+                <th>Confirmation</th>
+                <th>Student</th>
+                <th>Course</th>
+                <th>Exam</th>
+                <th>Professor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th style="text-align:center;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for r in results %}
+            <tr>
+                <td>{{ r.confirmation_code }}</td>
+                <td>{{ r.student_name }}</td>
+                <td>{{ r.course_code }}</td>
+                <td>{{ r.exam_type }}</td>
+                <td>{{ r.professor_name }}</td>
+                <td>{{ r.exam_date }}</td>
+                <td>{{ r.exam_time or '—' }}</td>
+                <td>{{ r.location or '—' }}</td>
+
+                <td>
+                    {% if r.status == 'Active' %}
+                        <span class="status-active">Active</span>
+                    {% else %}
+                        <span class="status-canceled">Canceled</span>
+                    {% endif %}
+                </td>
+
+                <td class="actions-col">
+                    <button class="secondary" onclick="alert('Cancel coming soon!')">
+                        Cancel
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-  {% elif request.method == 'POST' %}
+
+    {% elif request.method == 'POST' %}
     <p>No appointments found matching your search.</p>
-  {% endif %}
+    {% endif %}
 </main>
+
 {% endblock %}

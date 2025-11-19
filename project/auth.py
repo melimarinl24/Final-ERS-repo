@@ -250,64 +250,52 @@ def forgot_password():
         email = _email_lower(request.form.get('email'))
         user = User.query.filter_by(email=email).first()
 
-        # Always respond the same for privacy (whether or not user exists)
         if not user:
-            flash('If that email exists, a reset link has been sent.', 'forgot')
-            return redirect(url_for('auth.login'))
+            flash("If that email exists, a reset option will appear.", "reset")
+            return render_template("forgot_password.html", user=None)
 
-        token = _make_token(email)
-        reset_link = url_for('auth.reset_password', token=token, _external=True)
+        # Determine hint
+        if user.role.name.lower() == "student":
+            hint = f"Your default password was your NSHE ID"
+        else:
+            hint = f"Your default password was your Employee ID"
 
-        # Try to send mail if configured; otherwise show link so you can test
-        if _MAIL_OK:
-            try:
-                sender = current_app.config.get('MAIL_DEFAULT_SENDER') or email
-                msg = Message(
-                    subject="Password Reset Request",
-                    recipients=[email],
-                    body=(
-                        "Hello,\n\n"
-                        f"To reset your password, click the link below:\n{reset_link}\n\n"
-                        "If you did not request this, please ignore this email.\n\n"
-                        "CSN Exam Registration System"
-                    )
-                )
-                mail.send(msg)
-                flash('A password reset link has been sent to your email.', 'forgot')
-                return redirect(url_for('auth.login'))
-            except Exception:
-                # Fall through to showing the link on the page if email fails
-                pass
+        return render_template("reset_password.html", user=user, hint=hint)
 
-        # Mail not configured or failed: render a page that shows the link
-        flash('Email not configured — showing a one-time reset link below for testing.', 'forgot')
-        return render_template('forgot_password.html', reset_link=reset_link)
+    return render_template("forgot_password.html")
+    
 
-    return render_template('forgot_password.html')
 
-@auth.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    email = _read_token(token)
-    if not email:
-        flash('The reset link is invalid or has expired.', 'reset')
+@auth.route('/reset_password', methods=['POST'])
+def reset_password():
+    email = _email_lower(request.form.get('email'))
+    current_password = request.form.get('current_password') or ""
+    new_password = request.form.get('new_password') or ""
+    confirm_password = request.form.get('confirm_password') or ""
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash("Invalid request. User not found.", "reset")
         return redirect(url_for('auth.forgot_password'))
 
-    if request.method == 'POST':
-        new_password = (request.form.get('password') or '').strip()
-        confirm = (request.form.get('confirm_password') or '').strip()
-        if not new_password or new_password != confirm:
-            flash('Passwords do not match.', 'reset')
-            return render_template('reset_password.html', token=token)
+    # Verify current password
+    if not check_password_hash(user.password_hash, current_password):
+        flash("Current password is incorrect.", "reset")
+        return render_template("reset_password.html", user=user)
 
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            flash('User not found.', 'reset')
-            return redirect(url_for('auth.forgot_password'))
+    # Check new passwords match
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "reset")
+        return render_template("reset_password.html", user=user)
 
-        user.password_hash = generate_password_hash(new_password)
-        db.session.commit()
+    # Optional: enforce strong password
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters.", "reset")
+        return render_template("reset_password.html", user=user)
 
-        flash('Your password has been reset. Please log in.', 'reset')
-        return redirect(url_for('auth.login'))
+    # Save new password
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
 
-    return render_template('reset_password.html', token=token)
+    flash("Password updated successfully. Please log in.", "reset")
+    return redirect(url_for("auth.login"))

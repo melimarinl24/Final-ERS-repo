@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const opt = document.createElement("option");
         opt.value = e.exam_id;
         opt.textContent =
-          `${e.exam_type} — ${e.professor_name} (${e.remaining} seats left)`;
+          `${e.exam_type} — ${e.professor_name} `;
         opt.dataset.remaining = e.remaining;
         examDropdown.appendChild(opt);
       });

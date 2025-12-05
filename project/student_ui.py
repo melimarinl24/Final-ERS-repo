@@ -65,7 +65,6 @@ def start_reschedule(reg_id):
 def student_dashboard():
     return render_template("student_dashboard.html")
 
-
 # =====================================================================
 # EXAM SCHEDULING — STEP 1 (main page)
 # =====================================================================
@@ -74,6 +73,22 @@ def student_dashboard():
 def student_exams():
 
     reschedule_old_id = session.get("reschedule_old_id")
+
+    # -------------------------------------------------------------
+    # HELPER: active registration counts for this student
+    # -------------------------------------------------------------
+    max_allowed = 3
+    row = db.session.execute(text("""
+        SELECT COUNT(*) AS cnt
+        FROM registrations
+        WHERE user_id = :uid
+          AND status = 'Active'
+    """), {"uid": current_user.id}).mappings().first()
+
+    active_count = row["cnt"] if row and row["cnt"] is not None else 0
+    remaining_slots = max_allowed - active_count
+    if remaining_slots < 0:
+        remaining_slots = 0
 
     # Load locations
     locations = db.session.execute(text("""
@@ -183,7 +198,11 @@ def student_exams():
         locations=locations,
         timeslots=timeslots,
         exam_dates=exam_dates,         # REQUIRED
-        reschedule_old_id=reschedule_old_id
+        reschedule_old_id=reschedule_old_id,
+        # helper data
+        active_count=active_count,
+        max_allowed=max_allowed,
+        remaining_slots=remaining_slots,
     )
 
 
@@ -205,6 +224,58 @@ def confirm_final():
     if not exam_id or not timeslot_id or not location_id:
         flash("Missing appointment information.", "error")
         return redirect(url_for("student_ui.student_exams"))
+
+    # ==============================================================
+    # NEW: BUSINESS RULE CHECKS
+    # ==============================================================
+
+    # 1) Max 3 active registrations per student (normal booking only)
+    active_row = db.session.execute(text("""
+        SELECT COUNT(*) AS cnt
+        FROM registrations
+        WHERE user_id = :uid
+          AND status = 'Active'
+    """), {"uid": user_id}).mappings().first()
+
+    active_count = active_row["cnt"] if active_row and active_row["cnt"] is not None else 0
+
+    if not is_reschedule and active_count >= 3:
+        flash("You already have 3 active exam registrations. You cannot book more.", "error")
+        return redirect(url_for("student_ui.student_exams"))
+
+    # 2) No duplicate bookings per exam (one active reservation per exam)
+    #    For reschedule, ignore the existing row being replaced.
+    dup_params = {"uid": user_id, "eid": exam_id}
+
+    if is_reschedule and old_reg_id:
+        dup_sql = """
+            SELECT COUNT(*) AS cnt
+            FROM registrations
+            WHERE user_id = :uid
+              AND exam_id = :eid
+              AND status = 'Active'
+              AND id <> :old_id
+        """
+        dup_params["old_id"] = old_reg_id
+    else:
+        dup_sql = """
+            SELECT COUNT(*) AS cnt
+            FROM registrations
+            WHERE user_id = :uid
+              AND exam_id = :eid
+              AND status = 'Active'
+        """
+
+    dup_row = db.session.execute(text(dup_sql), dup_params).mappings().first()
+    dup_count = dup_row["cnt"] if dup_row and dup_row["cnt"] is not None else 0
+
+    if dup_count > 0:
+        flash("You already have an active reservation for this exam.", "error")
+        return redirect(url_for("student_ui.student_exams"))
+
+    # ==============================================================
+    # EXISTING LOGIC — generate registration_id and insert
+    # ==============================================================
 
     # Generate new registration ID
     row = db.session.execute(text("""
@@ -315,13 +386,28 @@ def cancel_appointment(reg_id):
     flash("Your appointment has been canceled.", "success")
     return redirect(url_for("student_ui.student_appointments"))
 
-
 # =====================================================================
 # VIEW MY APPOINTMENTS
 # =====================================================================
 @student_ui.route("/appointments")
 @login_required
 def student_appointments():
+
+    # -------------------------------------------------------------
+    # HELPER: active registration counts for this student
+    # -------------------------------------------------------------
+    max_allowed = 3
+    row = db.session.execute(text("""
+        SELECT COUNT(*) AS cnt
+        FROM registrations
+        WHERE user_id = :sid
+          AND status = 'Active'
+    """), {"sid": current_user.id}).mappings().first()
+
+    active_count = row["cnt"] if row and row["cnt"] is not None else 0
+    remaining_slots = max_allowed - active_count
+    if remaining_slots < 0:
+        remaining_slots = 0
 
     q = (request.args.get("q") or "").strip()
     start = (request.args.get("start") or "").strip()
@@ -379,5 +465,9 @@ def student_appointments():
         bookings=bookings,
         q=q,
         start=start,
-        end=end
+        end=end,
+        # helper data
+        active_count=active_count,
+        max_allowed=max_allowed,
+        remaining_slots=remaining_slots,
     )

@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 {% block content %}
 
+
+
 <style>
 /* ---------- TABLE ---------- */
 .appointments-table {
@@ -56,6 +58,17 @@
 
 <main class="container" style="max-width:950px; margin:40px auto; padding:18px;">
     <h1>My Appointments</h1>
+
+    <p class="text-muted mb-3">
+    You currently have <strong>{{ active_count }}</strong> of
+    <strong>{{ max_allowed }}</strong> active exam registrations.
+    {% if remaining_slots > 0 %}
+    You can still book <strong>{{ remaining_slots }}</strong> more exam{{ 's' if remaining_slots != 1 else '' }}.
+    {% else %}
+    You have reached the maximum number of active registrations allowed by the Exam Registration System.
+    {% endif %}
+    </p>
+
 
     <!-- Filters -->
     <form method="get" action="{{ url_for('student_ui.student_appointments') }}"

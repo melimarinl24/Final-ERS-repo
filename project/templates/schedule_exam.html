@@ -1,8 +1,19 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="page-section" style="max-width: 520px; margin: 0 auto;">
+<div class="page-section" style="max-width: 520px; margin: 0 auto; padding:50px;">
   <h2>Schedule an Exam</h2>
+
+  <p class="text-muted" style="margin-bottom: 0.75rem;">
+    You currently have <strong>{{ active_count }}</strong> of
+    <strong>{{ max_allowed }}</strong> active exam registrations.
+    {% if remaining_slots > 0 %}
+      You can book <strong>{{ remaining_slots }}</strong> more exam{{ 's' if remaining_slots != 1 else '' }}.
+    {% else %}
+      You have reached the maximum number of active registrations.
+      Please cancel or reschedule an existing appointment to book another.
+    {% endif %}
+  </p>
 
 {% if get_flashed_messages() %}
   <div class="flash-container">

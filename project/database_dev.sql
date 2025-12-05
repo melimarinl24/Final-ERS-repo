@@ -2,6 +2,9 @@
 -- Exam Registration System (ERS)
 -- Full schema + demo seed data
 -- =========================================================
+-- WARNING: DEVELOPMENT/DEMO SCRIPT
+-- This script DROPS and recreates all ERS tables and seeds demo data.
+-- Do NOT run this on a production database.
 
 -- NOTE:
 -- For production, you may want to REMOVE the DROP TABLE section
@@ -322,7 +325,14 @@ INSERT INTO Users
 (name, email, phone, nshe_id, employee_id, password_hash,
  role_id, department_id, major_id, status)
 VALUES
--- Faculty (role_id = 1, @csn.edu)
+-- ===========================
+-- FACULTY SEED DATA
+-- role_id = 1 (Faculty), @csn.edu
+-- ===========================
+
+-- (name, email, phone, nshe_id, employee_id, password_hash,
+--  role_id, department_id, major_id, status)
+
 ('Dr. Bart Simpson',
  'bart.simpson@csn.edu',
  '765-000-0000',
@@ -332,6 +342,51 @@ VALUES
  1,
  1,                -- CIT department
  1,                -- Computer Science
+ 'Active'),
+
+
+('Dr. Lisa Park',
+ 'lisa.park@csn.edu',
+ '702-651-0001',
+ NULL,
+ 'E223456',
+ 'x',
+ 1,
+ 1,     -- CIT
+ 2,     -- Information Technology
+ 'Active'),
+
+('Professor Alan Reyes',
+ 'alan.reyes@csn.edu',
+ '702-651-0002',
+ NULL,
+ 'E323456',
+ 'x',
+ 1,
+ 2,     -- Mathematics & Statistics Department
+ 3,     -- Applied Math
+ 'Active'),
+
+('Professor Dana Cole',
+ 'dana.cole@csn.edu',
+ '702-651-0003',
+ NULL,
+ 'E423456',
+ 'x',
+ 1,
+ 3,     -- English Department
+ 4,     -- English Major
+ 'Active'),
+
+('Dr. Maya Kim',
+ 'maya.kim@csn.edu',
+ '702-651-0004',
+ NULL,
+ 'E523456',
+ 'x',
+ 1,
+ 1,     -- CIT
+ 1,     -- Computer Science
  'Active'),
 
 -- Students (role_id = 2, @student.csn.edu)
@@ -357,12 +412,21 @@ VALUES
  4,                -- Business Management
  'Active');
 
--- PROFESSOR record linked to Bart
+-- PROFESSOR records for all faculty users
 INSERT INTO Professors (user_id, title)
-SELECT u.id, 'Professor'
+SELECT u.id,
+       CASE
+           WHEN u.name LIKE 'Dr.%'       THEN 'Professor'
+           WHEN u.name LIKE 'Professor%' THEN 'Professor'
+           ELSE 'Instructor'
+       END AS title
 FROM Users u
-WHERE u.email = 'bart.simpson@csn.edu'
-  AND NOT EXISTS (SELECT 1 FROM Professors p WHERE p.user_id = u.id);
+JOIN Roles r ON r.id = u.role_id
+WHERE LOWER(r.name) = 'faculty'
+  AND NOT EXISTS (
+      SELECT 1 FROM Professors p WHERE p.user_id = u.id
+  );
+
 
 -- =========================================================
 -- TIMESLOTS (8:00–17:00)
@@ -748,3 +812,18 @@ VALUES
  (SELECT MIN(id) FROM Exams WHERE exam_type='CS202 Final'),
  (SELECT id FROM Users WHERE email='patrick.star@student.csn.edu'),
  'Active');
+
+
+-- =========================================================
+-- AUTHENTICATION SEED (OPTIONAL - DEV ONLY)
+-- Mirrors Users into Authentication with simple username
+-- =========================================================
+INSERT INTO Authentication (user_id, username, email, password_hash, role_id)
+SELECT u.id,
+       SUBSTRING_INDEX(u.email, '@', 1) AS username,
+       u.email,
+       u.password_hash,
+       u.role_id
+FROM Users u
+LEFT JOIN Authentication a ON a.user_id = u.id
+WHERE a.user_id IS NULL;

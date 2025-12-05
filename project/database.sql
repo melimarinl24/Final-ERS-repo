@@ -1,5 +1,5 @@
-DROP TABLE IF EXISTS Registrations, Exams, Courses, Buildings,
-Locations, Users, Majors, Departments, Roles, Professors, Timeslots;
+DROP TABLE IF EXISTS Registrations, Exam_Locations, Exams, Courses, Buildings,
+Locations, Professors, Users, Majors, Departments, Roles, Timeslots, Authentication;
 
 -- 1. Roles
 CREATE TABLE Roles (
@@ -52,17 +52,18 @@ CREATE TABLE Professors (
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 );
 
--- 6. Locations
+-- 6. Locations  (Campus + Room)
 CREATE TABLE Locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+    name VARCHAR(100) NOT NULL,       -- Campus name (North Las Vegas, West Charleston, Henderson)
+    room_number VARCHAR(50) NOT NULL  -- Testing center room, always required
 );
 
--- 7. Buildings
+-- 7. Buildings (Building per campus)
 CREATE TABLE Buildings (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    location_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,       -- Building name (Building A, B, D, etc.)
+    location_id INT NOT NULL,         -- Campus
     FOREIGN KEY (location_id) REFERENCES Locations(id)
 );
 
@@ -89,8 +90,8 @@ CREATE TABLE Exams (
     course_id INT NOT NULL,
     exam_date DATE NOT NULL,
     exam_time TIME,
-    location_id INT NOT NULL,
-    building_id INT NOT NULL,
+    location_id INT NOT NULL,   -- Campus
+    building_id INT NOT NULL,   -- Building
     capacity INT DEFAULT 20,
     professor_id INT,
     timeslot_id INT,
@@ -108,7 +109,7 @@ CREATE TABLE Registrations (
     exam_id INT NOT NULL,
     user_id INT NOT NULL,
     timeslot_id INT,
-    location_id INT,
+    location_id INT,  -- Campus chosen for this student's appointment
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('Active','Canceled') DEFAULT 'Active',
     UNIQUE(exam_id, user_id),
@@ -116,13 +117,25 @@ CREATE TABLE Registrations (
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 );
 
--- 12. Exam Locations
+-- 12. Exam Locations (exam sessions offered at specific campuses)
 CREATE TABLE Exam_Locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     exam_id INT NOT NULL,
     location_id INT NOT NULL,
     capacity INT NOT NULL DEFAULT 20,
     UNIQUE KEY (exam_id, location_id),
-    FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
+    FOREIGN KEY (exam_id) REFERENCES Exams(id) ON DELETE CASCADE,
+    FOREIGN KEY (location_id) REFERENCES Locations(id) ON DELETE CASCADE
+);
+
+-- 13. Authentication (required by professor)
+CREATE TABLE Authentication (
+    auth_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    username VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES Roles(id)
 );

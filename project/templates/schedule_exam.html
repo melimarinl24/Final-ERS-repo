@@ -20,7 +20,7 @@
         style="display:flex; flex-direction:column; gap:1rem;">
 
     <!-- CSRF TOKEN -->
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
 
     <!-- DATE -->
     <label for="exam_date"><strong>Select Date:</strong></label>

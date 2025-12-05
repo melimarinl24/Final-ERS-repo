@@ -571,3 +571,168 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
   color: #006600;
   border-left: 4px solid #006600;
 }
+
+
+.action-btn {
+  background: #E8E8E8;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.15s ease;
+  font-size: 0.85rem;
+}
+
+.action-btn:hover {
+  background: #d7d7d7;
+}
+
+
+.btn-action {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.btn-action:hover {
+    background: #e4e4e4;
+}
+
+.btn-cancel, .btn-reschedule {
+    background: #f0f0f0;
+}
+
+.reset-link {
+    color: #6a0dad;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.reset-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* Unified cancel/reschedule buttons */
+.btn-action {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.btn-action:hover {
+    background: #e4e4e4;
+}
+
+.btn-cancel,
+.btn-reschedule {
+    background: #f0f0f0 !important; /* ensure matching color */
+}
+
+
+/* Student page Reset link style */
+.reset-link {
+    color: #6a0dad;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.reset-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+
+/* Modal buttons */
+.modal-buttons button {
+    cursor: pointer;
+}
+
+#cancelNo {
+    background: #e0e0e0;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+}
+
+#cancelYes {
+    background: #b00020;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+}
+
+/* ============================================================
+   ACTION BUTTONS (Cancel + Reschedule)
+============================================================ */
+.btn-action {
+    background: #f3f3f3 !important;
+    border: 1px solid #ccc !important;
+    padding: 6px 14px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 0.9rem !important;
+    color: #222 !important;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+/* Cancel / Reschedule should look the SAME */
+.btn-action.btn-cancel,
+.btn-action.btn-reschedule {
+    border-color: #ccc !important;
+    background-color: #f3f3f3 !important;
+    color: #222 !important;
+}
+
+/* Hover */
+.btn-action:hover {
+    background: #e6e6e6 !important;
+}
+
+
+.btn-primary-purple {
+    background: linear-gradient(90deg, #7c3aed, #9333ea);
+    color: white;
+    padding: 12px 26px;
+    border-radius: 40px;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer; /* ← FIX */
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary-purple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #5A2CA0;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 10px 14px;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+    color: #3c1a75;
+}
+
+

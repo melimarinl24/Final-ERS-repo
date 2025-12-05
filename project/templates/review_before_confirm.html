@@ -1,35 +1,35 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="container mt-5" style="max-width: 700px;">
-  <h2 class="text-center mb-4">Please Confirm Your Information</h2>
+<main class="container" style="max-width:700px; margin:40px auto;">
 
-  <div class="card shadow-lg p-4">
+    <h1>Review Your Appointment</h1>
 
-    <p><strong>Exam:</strong> {{ info.exam_title }}</p>
-    <p><strong>Professor:</strong> {{ info.professor_name }}</p>
-    <p><strong>Date:</strong> {{ info.exam_date.strftime('%B %d, %Y') }}</p>
-    <p><strong>Time:</strong> {{ info.start_time }} - {{ info.end_time }}</p>
-    <p><strong>Location:</strong> {{ info.location }}</p>
+    <div class="card" style="padding:20px; margin-top:20px;">
+        <p><strong>Exam:</strong> {{ info.exam_title }}</p>
+        <p><strong>Date:</strong> {{ info.exam_date }}</p>
+        <p><strong>Time:</strong> {{ info.start_time }} – {{ info.end_time }}</p>
+        <p><strong>Professor:</strong> {{ info.professor_name }}</p>
+        <p><strong>Location:</strong> {{ info.full_location }}</p>
 
-    <hr>
+    </div>
 
-    <form method="POST" action="{{ url_for('student_ui.confirm_final') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="exam_id" value="{{ info.selected_exam }}">
-      <input type="hidden" name="location_id" value="{{ info.selected_loc }}">
-      <input type="hidden" name="timeslot_id" value="{{ info.selected_timeslot }}">
+    <form method="POST" action="{{ url_for('student_ui.confirm_final') }}" style="margin-top:20px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
 
-      <div class="d-flex justify-content-between mt-4">
-        <a href="{{ url_for('student_ui.student_exams') }}" 
-           class="btn btn-outline-secondary">Go Back</a>
+        <input type="hidden" name="exam_id" value="{{ info.selected_exam }}">
+        <input type="hidden" name="location_id" value="{{ info.selected_loc }}">
+        <input type="hidden" name="timeslot_id" value="{{ info.selected_timeslot }}">
 
-        <button type="submit" class="btn btn-primary">
-          Confirm
-        </button>
-      </div>
+        {% if info.reschedule_old_id %}
+            <input type="hidden" name="reschedule_old_id" value="{{ info.reschedule_old_id }}">
+        {% endif %}
+
+        <button class="btn-primary-purple" type="submit">Confirm Appointment</button>
+        <a href="{{ url_for('student_ui.student_exams') }}" class="btn-link secondary" style="margin-left:10px;">
+            Go Back
+        </a>        
     </form>
-  </div>
-</div>
+</main>
 
 {% endblock %}

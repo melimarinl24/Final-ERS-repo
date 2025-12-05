@@ -1,12 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
+
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <div class="alert alert-{{ category }}">{{ message }}</div>
+{% endfor %}
+
 <main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
   <h1>
     Welcome,
     {% if current_user.is_authenticated and current_user.name %}
       {{ current_user.name.split(' ')[0] }}
-    {% else %}
-      Faculty
+    {% else %} 
+    Faculty 
     {% endif %}
   </h1>
 
@@ -21,14 +26,11 @@
       </li>
       <li style="margin-bottom:10px;">
         <a href="{{ url_for('faculty_ui.faculty_print_log') }}" class="btn btn-primary-blue">
-          View All Appointments
+          Print Exam Log
         </a>
       </li>
     </ul>
   </nav>
 
-  <p class="hint">
-    Use the navigation above to view or search for exam registrations.
-  </p>
 </main>
 {% endblock %}

@@ -2,145 +2,147 @@
 {% block content %}
 
 <style>
+/* ---------- TABLE ---------- */
 .appointments-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.95rem;
     margin-top: 1rem;
 }
-
 .appointments-table th {
     text-align: left;
     padding: 10px 8px;
     border-bottom: 2px solid #ddd;
-    font-weight: 600;
 }
-
 .appointments-table td {
     padding: 10px 8px;
     border-bottom: 1px solid #eee;
 }
 
-/* Consistent column widths */
-.appointments-table th:nth-child(1),
-.appointments-table td:nth-child(1) {
-    width: 120px;   /* Confirmation */
+/* ---------- STATUS ---------- */
+.status-active { color: green; font-weight: 600; }
+.status-canceled { color: #b00; font-weight: 600; }
+
+/* ---------- ACTION BUTTONS ---------- */
+.btn-action {
+    background: #f1f1f1;
+    border: 1px solid #ccc;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-action:hover {
+    background: #e3e3e3;
 }
 
-.appointments-table th:nth-child(2),
-.appointments-table td:nth-child(2) {
-    width: 90px;    /* Course */
+/* Color variations */
+.btn-cancel {
+    background: #ffe5e5;
+    border-color: #d88;
+}
+.btn-cancel:hover {
+    background: #ffd6d6;
 }
 
-.appointments-table th:nth-child(3),
-.appointments-table td:nth-child(3) {
-    width: 110px;   /* Exam */
+.btn-reschedule {
+    background: #e6f0ff;
+    border-color: #88aadd;
 }
-
-.appointments-table th:nth-child(4),
-.appointments-table td:nth-child(4) {
-    width: 140px;   /* Professor */
-}
-
-.appointments-table th:nth-child(5),
-.appointments-table td:nth-child(5),
-.appointments-table th:nth-child(6),
-.appointments-table td:nth-child(6) {
-    width: 100px;   /* Date + Time */
-    text-align: center;
-}
-
-/* Status formatting */
-.status-active {
-    color: green;
-    font-weight: 600;
-}
-
-.status-canceled {
-    color: #b00;
-    font-weight: 600;
-}
-
-/* Action buttons */
-.actions-col {
-    text-align: center;
-    white-space: nowrap;
-}
-
-.actions-col button {
-    margin: 0 3px;
-    padding: 4px 8px;
-    font-size: 0.85rem;
+.btn-reschedule:hover {
+    background: #d6e8ff;
 }
 </style>
 
 
-<main class="container" style="max-width:900px; margin:40px auto; padding:18px;">
-  <h1>My Appointments</h1>
+<main class="container" style="max-width:950px; margin:40px auto; padding:18px;">
+    <h1>My Appointments</h1>
 
-  <!-- Filters -->
-  <form method="get" action="{{ url_for('student_ui.student_appointments') }}"
-        style="margin: 1rem 0; display:flex; gap:0.5rem; flex-wrap:wrap;">
-    <input type="search" name="q" placeholder="Search exam or course"
-           value="{{ q or '' }}">
+    <!-- Filters -->
+    <form method="get" action="{{ url_for('student_ui.student_appointments') }}"
+          style="margin: 1rem 0; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input type="search" name="q" placeholder="Search exam or course" value="{{ q or '' }}">
+        <input type="date" name="start" value="{{ start or '' }}">
+        <input type="date" name="end" value="{{ end or '' }}">
 
-    <input type="date" name="start" value="{{ start or '' }}">
-    <input type="date" name="end" value="{{ end or '' }}">
-
-    <button type="submit">Filter</button>
-    <a href="{{ url_for('student_ui.student_appointments') }}" class="secondary">Reset</a>
-  </form>
-
-  {% if bookings and bookings|length > 0 %}
-
-  <table role="grid" class="appointments-table">
-    <thead>
-      <tr>
-        <th>Confirmation</th>
-        <th>Course</th>
-        <th>Exam</th>
-        <th>Professor</th>
-        <th>Date</th>
-        <th>Time</th>
-        <th>Location</th>
-        <th>Status</th>
-        <th style="text-align:center;">Actions</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for b in bookings %}
-      <tr>
-        <td>{{ b.confirmation_code }}</td>
-        <td>{{ b.course_code }}</td>
-        <td>{{ b.exam_type }}</td>
-        <td>{{ b.professor_name }}</td>
-        <td>{{ b.exam_date }}</td>
-        <td>{{ b.exam_time or '—' }}</td>
-        <td>{{ b.location }}</td>
-        <td>
-          {% if b.status == 'Active' %}
-          <span class="status-active">Active</span>
-          {% else %}
-          <span class="status-canceled">Canceled</span>
-          {% endif %}
-        </td>
-        <td class="actions-col">
-          <button class="secondary" onclick="alert('Cancel coming soon!')">Cancel</button>
-          <button onclick="alert('Reschedule coming soon!')">Reschedule</button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        <button type="submit">Filter</button>
+        <a href="{{ url_for('student_ui.student_appointments') }}" class="reset-link">Reset</a>
+    </form>
 
 
+    {% if bookings %}
+    <table class="appointments-table">
+        <thead>
+            <tr>
+                <th>Confirmation</th>
+                <th>Course</th>
+                <th>Exam</th>
+                <th>Professor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th style="text-align:center;">Actions</th>
+            </tr>
+        </thead>
 
+        <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td>{{ b.confirmation_code }}</td>
+            <td>{{ b.course_code }}</td>
+            <td>{{ b.exam_type }}</td>
+            <td>{{ b.professor_name }}</td>
+            <td>{{ b.exam_date }}</td>
+            <td>{{ b.exam_time or '—' }}</td>
+            <td>{{ b.full_location }}</td>
 
+            <td>
+                {% if b.status == 'Active' %}
+                    <span class="status-active">Active</span>
+                {% else %}
+                    <span class="status-canceled">Canceled</span>
+                {% endif %}
+            </td>
 
-  {% else %}
-    <p>No appointments found.</p>
-  {% endif %}
+            <td style="text-align:center; white-space:nowrap;">
+
+                {% if b.status == 'Active' %}
+
+                <!-- CANCEL — uses modal -->
+                <form method="POST"
+                      action="{{ url_for('student_ui.cancel_appointment', reg_id=b.reg_id) }}"
+                      class="cancel-form"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button"
+                            class="btn-action btn-cancel"
+                            onclick="openCancelModal(this.form)">
+                        Cancel
+                    </button>
+                </form>
+
+                <!-- RESCHEDULE — same styling -->
+                <form method="POST"
+                      action="{{ url_for('student_ui.start_reschedule', reg_id=b.reg_id) }}"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-action btn-reschedule">
+                        Reschedule
+                    </button>
+                </form>
+
+                {% else %}
+                    <span style="color:#777;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+        <p>No appointments found.</p>
+    {% endif %}
 </main>
 
 {% endblock %}

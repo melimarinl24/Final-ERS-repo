@@ -1,39 +1,55 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+
 <style>
-.faculty-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-    font-size: 0.95rem;
-}
+    .faculty-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        font-size: 0.95rem;
+    }
 
-.faculty-table th {
-    text-align: left;
-    padding: 10px 8px;
-    border-bottom: 2px solid #ddd;
-    font-weight: 600;
-}
+    .faculty-table th {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 2px solid #ddd;
+        font-weight: 600;
+    }
 
-.faculty-table td {
-    padding: 10px 8px;
-    border-bottom: 1px solid #eee;
-}
+    .faculty-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+    }
 
-.status-active { color: green; font-weight: 600; }
-.status-canceled { color: #b00; font-weight: 600; }
+    .status-active { color: green; font-weight: 600; }
+    .status-canceled { color: #b00; font-weight: 600; }
 
-.actions-col {
-    text-align: center;
-    white-space: nowrap;
-}
+    .actions-col {
+        text-align: center;
+        white-space: nowrap;
+    }
 
-.actions-col button {
-    margin: 0 3px;
-    padding: 4px 8px;
-    font-size: 0.85rem;
-}
+    .btn-action {
+        background: #f1f1f1;
+        border: 1px solid #ccc;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .btn-action:hover {
+        background: #e3e3e3;
+    }
 </style>
 
 
@@ -41,14 +57,14 @@
     <h1>Search Appointments</h1>
 
     <form method="POST" style="margin-bottom:24px; display:flex; gap:0.5rem;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
 
         <input type="text" name="search_term"
                value="{{ search_term }}"
                placeholder="Search student, exam, course, or confirmation code"
                style="flex:1; padding:0.5rem;">
 
-        <button type="submit" class="btn btn-primary-blue">Search</button>
+        <button type="submit" class="btn-action">Search</button>
     </form>
 
 
@@ -79,7 +95,7 @@
                 <td>{{ r.professor_name }}</td>
                 <td>{{ r.exam_date }}</td>
                 <td>{{ r.exam_time or '—' }}</td>
-                <td>{{ r.location or '—' }}</td>
+                <td>{{ r.full_location or '—' }}</td>
 
                 <td>
                     {% if r.status == 'Active' %}
@@ -90,9 +106,20 @@
                 </td>
 
                 <td class="actions-col">
-                    <button class="secondary" onclick="alert('Cancel coming soon!')">
-                        Cancel
-                    </button>
+
+                    {% if r.status == 'Active' %}
+                    <form method="POST"
+                        action="{{ url_for('faculty_ui.cancel_registration', reg_id=r.reg_id) }}"
+                        style="display:inline;"
+                        onsubmit="openCancelModal(this); return false;">
+                        
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
+                        <button class="btn-action" type="submit">Cancel</button>
+                    </form>
+                    {% else %}
+                        <span style="color:#777; font-size:0.85rem;">-</span>
+                    {% endif %}
+
                 </td>
             </tr>
             {% endfor %}
@@ -100,7 +127,7 @@
     </table>
 
     {% elif request.method == 'POST' %}
-    <p>No appointments found matching your search.</p>
+        <p>No appointments found matching your search.</p>
     {% endif %}
 </main>
 

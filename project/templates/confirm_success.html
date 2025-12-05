@@ -1,57 +1,30 @@
 {% extends "layout.html" %}
-{% block title %}Exam Confirmed{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-  <div class="card shadow-lg border-0 rounded-4">
 
-    <!-- HEADER -->
-    <div class="card-header bg-success text-white text-center py-3 rounded-top-4">
-      <h2 class="mb-0">Appointment Booked Successfully!</h2>
-    </div>
+<main class="container" style="max-width:700px; margin:40px auto;">
 
-    <div class="card-body p-4 text-center">
+    <h1>Appointment Confirmed</h1>
 
-      <p class="lead mb-4">
-        Your exam has been scheduled.
-      </p>
-
-      <hr>
-
-      <!-- CONFIRMATION NUMBER -->
-      <div class="mt-4 mb-4">
-        <h5><strong>Confirmation Code:</strong></h5>
-        <p class="fs-4 fw-bold text-success">{{ info.confirmation_code }}</p>
-      </div>
-
-      <!-- DETAILS -->
-      <div class="text-start mx-auto" style="max-width: 450px;">
+    <div class="card" style="padding:20px; margin-top:20px;">
+        <p><strong>Confirmation Code:</strong> {{ info.confirmation_code }}</p>
         <p><strong>Exam:</strong> {{ info.exam_title }}</p>
+        <p><strong>Date:</strong> {{ info.exam_date }}</p>
+        <p><strong>Time:</strong> {{ info.start_time }} – {{ info.end_time }}</p>
+        <p><strong>Location:</strong> {{ info.full_location }}</p>
         <p><strong>Professor:</strong> {{ info.professor_name }}</p>
-        <p><strong>Date:</strong> {{ info.exam_date.strftime('%B %d, %Y') }}</p>
-        <p><strong>Time:</strong> {{ info.start_time }} - {{ info.end_time }}</p>
-        <p><strong>Location:</strong> {{ info.location }}</p>
-      </div>
 
-      <hr>
-
-      <!-- DISCLAIMER -->
-      <p class="text-muted">
-        <em>Please make sure to arrive at least <strong>10 minutes before your scheduled exam time</strong>.</em>
-      </p>
-
-      <hr>
-
-      <div class="mt-4">
-        <a href="{{ url_for('student_ui.student_dashboard') }}" class="btn btn-primary btn-lg rounded-3">
-          Continue
-        </a>
-        <a href="{{ url_for('student_ui.student_appointments') }}" class="btn btn-outline-secondary btn-lg rounded-3 ms-2">
-          View My Appointments
-        </a>
-      </div>
-
+        {% if info.was_reschedule %}
+            <p style="margin-top:15px; color:#4a7;">
+                Your old appointment has been successfully canceled.
+            </p>
+        {% endif %}
     </div>
-  </div>
-</div>
+
+    <a href="{{ url_for('student_ui.student_appointments') }}"
+       class="btn-primary-purple" style="margin-top:20px; display:inline-block;">
+       View My Appointments
+    </a>
+
+</main>
+
 {% endblock %}

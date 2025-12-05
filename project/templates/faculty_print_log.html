@@ -2,40 +2,103 @@
 {% block content %}
 <main class="container" style="max-width:900px;margin:40px auto;padding:18px;">
   <h1>Exam Log</h1>
-  <p>Below is a complete log of all scheduled exams. You can print or export this list for your records.</p>
 
-  <div style="margin-bottom:16px;">
-    <button onclick="window.print()" class="btn btn-primary-blue">Print This Page</button>
-    <a href="{{ url_for('faculty_ui.faculty_dashboard') }}" class="btn btn-outline">← Back to Dashboard</a>
-  </div>
+  <!-- Filters -->
+  <form method="get"
+        style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;">
+    <div>
+      <label for="start" style="display:block;font-size:0.9rem;">Start Date</label>
+      <input type="date" id="start" name="start" value="{{ start or '' }}">
+    </div>
+
+    <div>
+      <label for="end" style="display:block;font-size:0.9rem;">End Date</label>
+      <input type="date" id="end" name="end" value="{{ end or '' }}">
+    </div>
+
+    <div style="min-width:180px;">
+      <label for="exam" style="display:block;font-size:0.9rem;">Exam</label>
+      <input type="text" id="exam" name="exam"
+             placeholder="Exam name/type"
+             value="{{ exam or '' }}">
+    </div>
+
+    <div>
+      <label for="status" style="display:block;font-size:0.9rem;">Status</label>
+      <select id="status" name="status">
+        <option value="" {% if not status %}selected{% endif %}>All</option>
+        <option value="Active" {% if status == 'Active' %}selected{% endif %}>Active</option>
+        <option value="Canceled" {% if status == 'Canceled' %}selected{% endif %}>Canceled</option>
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary-blue">Apply Filters</button>
+      <a href="{{ url_for('faculty_ui.faculty_print_log') }}" class="btn btn-outline">
+        Reset
+      </a>
+    </div>
+  </form>
+
+<div style="
+    margin-bottom:16px; 
+    display:flex; 
+    justify-content:space-between; 
+    align-items:center;
+    flex-wrap:wrap;
+">
+
+    <!-- LEFT SIDE -->
+    <a href="{{ url_for('faculty_ui.faculty_dashboard') }}" 
+       class="btn btn-outline"
+       style="padding:6px 14px; font-size:0.9rem;">
+        ← Back to Dashboard
+    </a>
+
+    <!-- RIGHT SIDE BUTTONS -->
+    <div style="display:flex; gap:0.5rem;">
+        <button onclick="window.print()" 
+                class="btn btn-primary-blue"
+                style="padding:6px 14px; font-size:0.9rem;">
+            Print This Page
+        </button>
+
+        <a href="{{ url_for('faculty_ui.faculty_print_log', start=today, end=today) }}"
+           class="btn btn-primary-blue"
+           style="padding:6px 14px; font-size:0.9rem;">
+            Today’s Exams
+        </a>
+    </div>
+
+</div>
 
   {% if exams and exams|length > 0 %}
     <table role="grid" style="width:100%; border-collapse:collapse;">
       <thead>
         <tr style="background-color:#f4f4f4;">
-          <th>Exam Name</th>
-          <th>Date</th>
-          <th>Time</th>
-          <th>Location</th>
-          <th>Student</th>
-          <th>Status</th>
+          <th style="text-align:left;padding:8px;">Exam Name</th>
+          <th style="text-align:left;padding:8px;">Date</th>
+          <th style="text-align:left;padding:8px;">Time</th>
+          <th style="text-align:left;padding:8px;">Location</th>
+          <th style="text-align:left;padding:8px;">Student</th>
+          <th style="text-align:left;padding:8px;">Status</th>
         </tr>
       </thead>
       <tbody>
         {% for row in exams %}
           <tr>
-            <td>{{ row.exam_name }}</td>
-            <td>{{ row.exam_date }}</td>
-            <td>{{ row.exam_time or 'TBA' }}</td>
-            <td>{{ row.exam_location }}</td>
-            <td>{{ row.first_name }} {{ row.last_name }}</td>
-            <td>{{ row.status }}</td>
+            <td style="padding:8px;">{{ row.exam_name }}</td>
+            <td style="padding:8px;">{{ row.exam_date }}</td>
+            <td style="padding:8px;">{{ row.exam_time or 'TBA' }}</td>
+            <td style="padding:8px;">{{ row.full_location }}</td>
+            <td style="padding:8px;">{{ row.student_name }}</td>
+            <td style="padding:8px;">{{ row.status }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <p>No exam records found.</p>
+    <p>No exam records found for the selected filters.</p>
   {% endif %}
 </main>
 {% endblock %}

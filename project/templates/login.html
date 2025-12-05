@@ -29,7 +29,7 @@
 
   <form id="loginForm" class="login-form" method="post" action="{{ url_for('auth.login') }}" aria-label="Login form">
     <!-- CSRF token -->
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
     <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
 
     <input type="email" id="email" name="email" placeholder="Email" required>

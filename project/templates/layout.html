@@ -42,7 +42,7 @@
 
         <li>
           <form id="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
             <button type="submit" class="btn-primary-purple">Log Out</button>
           </form>
         </li>
@@ -58,6 +58,86 @@
 <footer class="footer">
   <p>&copy; 2025 Exam Registration System</p>
 </footer>
+
+
+<!-- ============================================================
+     GLOBAL CANCEL MODAL  (works for ALL cancel actions)
+============================================================ -->
+<div id="cancelModal" class="modal" style="display:none;">
+  <div class="modal-content">
+      <p id="cancelMessage">Are you sure you want to cancel this appointment?</p>
+
+      <div class="modal-buttons">
+          <button id="cancelNo" class="secondary">No</button>
+          <button id="cancelYes" class="danger">Yes, Cancel</button>
+      </div>
+  </div>
+</div>
+
+<style>
+/* Modal overlay */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+}
+
+/* Modal box */
+.modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    width: 320px;
+    text-align: center;
+}
+
+/* Buttons inside modal */
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.danger {
+    background: #b00;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+}
+
+.secondary {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    background: #e0e0e0;
+}
+</style>
+
+<script>
+/* GLOBAL CANCEL MODAL LOGIC */
+let formToSubmit = null;
+
+function openCancelModal(form, msg="Are you sure you want to cancel this appointment?") {
+    formToSubmit = form;
+    document.getElementById("cancelMessage").innerText = msg;
+    document.getElementById("cancelModal").style.display = "flex";
+}
+
+document.getElementById("cancelNo").onclick = function() {
+    formToSubmit = null;
+    document.getElementById("cancelModal").style.display = "none";
+};
+
+document.getElementById("cancelYes").onclick = function() {
+    if (formToSubmit) formToSubmit.submit();
+};
+</script>
 
 </body>
 </html>

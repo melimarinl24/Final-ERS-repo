@@ -45,8 +45,20 @@ def create_app():
         f"@{app.config['MYSQL_HOST']}/{app.config['MYSQL_DB']}?charset=utf8mb4"
     )
 
-    # Prefer Heroku DATABASE_URL / CLEARDB_DATABASE_URL if present
-    db_url = os.getenv("DATABASE_URL") or os.getenv("CLEARDB_DATABASE_URL")
+    # Prefer Heroku-provided URLs if present
+    db_url = (
+        os.getenv("DATABASE_URL")
+        or os.getenv("CLEARDB_DATABASE_URL")
+        or os.getenv("JAWSDB_URL")
+    )
+
+    if db_url:
+        if db_url.startswith("mysql://"):
+            db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = default_uri
+
 
     if db_url:
         # Heroku ClearDB uses mysql://, SQLAlchemy needs mysql+pymysql://

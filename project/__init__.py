@@ -2,7 +2,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_migrate import Migrate
+# from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 import os
 from dotenv import load_dotenv
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
-migrate = Migrate()
+# migrate = Migrate()
 
 # Load env vars (for local dev; harmless on Heroku)
 load_dotenv()
@@ -46,7 +46,7 @@ def create_app():
     )
 
     # If Heroku provides DATABASE_URL, prefer that. Otherwise use local.
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", default_uri)
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("mysql://zuo56vhxdhsu4ybi:rusby58q7za2cyhk@s554ongw9quh1xjs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/yker9ukcjnwzm2it", default_uri)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # --------------------------

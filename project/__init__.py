@@ -45,9 +45,19 @@ def create_app():
         f"@{app.config['MYSQL_HOST']}/{app.config['MYSQL_DB']}?charset=utf8mb4"
     )
 
-    # If Heroku provides DATABASE_URL, prefer that. Otherwise use local.
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("mysql://zuo56vhxdhsu4ybi:rusby58q7za2cyhk@s554ongw9quh1xjs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/yker9ukcjnwzm2it", default_uri)
+    # Prefer Heroku DATABASE_URL / CLEARDB_DATABASE_URL if present
+    db_url = os.getenv("DATABASE_URL") or os.getenv("CLEARDB_DATABASE_URL")
+
+    if db_url:
+        # Heroku ClearDB uses mysql://, SQLAlchemy needs mysql+pymysql://
+        if db_url.startswith("mysql://"):
+            db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = default_uri
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 
     # --------------------------
     # Initialize extensions
@@ -71,10 +81,12 @@ def create_app():
         return User.query.get(int(user_id))
 
     # --------------------------
-    # Create database tables
+    # Create database tables (dev only)
     # --------------------------
-    with app.app_context():
-        db.create_all()  # OK for dev; in “real” prod you’d normally use migrations only
+    if app.config["DEBUG"]:
+        with app.app_context():
+            db.create_all()
+
 
     # --------------------------
     # Register Blueprints (active)

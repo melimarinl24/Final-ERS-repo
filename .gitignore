@@ -1,12 +1,37 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Virtualenv
 venv/
 .env
+.env.*     # If you use multiple env files
 
-# IDE
+# IDE / Workspace
 .vscode/
 .idea/
 *.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development DBs (DO NOT push these)
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Redis / Cache / Temp
+*.pid
+*.cache/
+*.pytest_cache/
+
+# pytest, coverage, build artifacts
+.coverage
+htmlcov/
+dist/
+build/

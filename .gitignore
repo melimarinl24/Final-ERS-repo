@@ -1,3 +1,12 @@
-.env
+# Python
 __pycache__/
 *.pyc
+
+# Virtualenv
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace

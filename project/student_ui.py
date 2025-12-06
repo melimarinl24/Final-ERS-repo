@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import text
 from datetime import date, timedelta
 from project import db
+from project.email_utils import send_exam_confirmation
 
 student_ui = Blueprint("student_ui", __name__)
 
@@ -205,7 +206,6 @@ def student_exams():
         remaining_slots=remaining_slots,
     )
 
-
 # =====================================================================
 # FINAL CONFIRM — Creates New Appointment (Normal or Reschedule)
 # =====================================================================
@@ -226,7 +226,7 @@ def confirm_final():
         return redirect(url_for("student_ui.student_exams"))
 
     # ==============================================================
-    # NEW: BUSINESS RULE CHECKS
+    # BUSINESS RULE CHECKS
     # ==============================================================
 
     # 1) Max 3 active registrations per student (normal booking only)
@@ -274,10 +274,9 @@ def confirm_final():
         return redirect(url_for("student_ui.student_exams"))
 
     # ==============================================================
-    # EXISTING LOGIC — generate registration_id and insert
+    # GENERATE REGISTRATION ID
     # ==============================================================
 
-    # Generate new registration ID
     row = db.session.execute(text("""
         SELECT MAX(CAST(SUBSTRING(registration_id, 4) AS UNSIGNED)) AS max_num
         FROM registrations
@@ -286,8 +285,21 @@ def confirm_final():
 
     new_reg_id = f"CSN{(row['max_num'] or 0) + 1:03d}"
 
-    # Insert new appointment
+    # ==============================================================
+    # WRITE TO DB (handle reschedule + insert) + COMMIT
+    # ==============================================================
+
     try:
+        # If reschedule → cancel old *first*
+        if is_reschedule and old_reg_id:
+            db.session.execute(text("""
+                UPDATE registrations
+                SET status = 'Canceled'
+                WHERE id = :old
+            """), {"old": old_reg_id})
+            session.pop("reschedule_old_id", None)
+
+        # Insert new appointment
         db.session.execute(text("""
             INSERT INTO registrations
                 (registration_id, user_id, exam_id, timeslot_id, location_id, registration_date, status)
@@ -300,59 +312,62 @@ def confirm_final():
             "t": timeslot_id,
             "l": location_id
         })
+
         db.session.commit()
+
     except Exception as e:
         db.session.rollback()
         print("ERROR inserting registration:", e)
         flash("Unexpected error creating appointment.", "error")
         return redirect(url_for("student_ui.student_exams"))
 
-    # If reschedule → cancel old
-    if is_reschedule:
-        db.session.execute(text("""
-            UPDATE registrations
-            SET status = 'Canceled'
-            WHERE id = :old
-        """), {"old": old_reg_id})
-        db.session.commit()
-        session.pop("reschedule_old_id", None)
-
-    # Load confirmation details
-    reg = db.session.execute(text("""
+    # ==========================
+    # EMAIL CONFIRMATION
+    # ==========================
+    exam_info = db.session.execute(text("""
         SELECT 
-            r.registration_id,
             e.exam_type AS exam_title,
             e.exam_date,
-            u.name AS professor_name,
+            u.name        AS professor_name,
+            l.name        AS campus,
+            b.name        AS building,
+            l.room_number AS room
+        FROM exams e
+        JOIN professors p ON e.professor_id = p.id
+        JOIN users u      ON p.user_id = u.id
+        JOIN locations l  ON l.id = :loc_id
+        JOIN buildings b  ON b.location_id = l.id
+        WHERE e.id = :exam_id
+    """), {"exam_id": exam_id, "loc_id": location_id}).mappings().first()
 
-            l.name AS campus,
-            b.name AS building,
-            l.room_number AS room,
+    if exam_info:
+        exam_date_str = exam_info["exam_date"].strftime("%Y-%m-%d")
+        start_time, end_time = get_timeslot_label(timeslot_id)
+        full_location = f"{exam_info['campus']} – {exam_info['building']}, Room {exam_info['room']}"
 
-            ts.start_time,
-            ts.end_time
-        FROM registrations r
-        JOIN exams e ON e.id = r.exam_id
-        JOIN professors p ON p.id = e.professor_id
-        JOIN users u ON u.id = p.user_id
-        JOIN locations l ON l.id = r.location_id
-        JOIN buildings b ON b.location_id = l.id
-        JOIN timeslots ts ON ts.id = r.timeslot_id
-        WHERE r.registration_id = :rid
-    """), {"rid": new_reg_id}).mappings().first()
+        html_body = f"""
+            <p>Hi {current_user.name},</p>
+            <p>Your exam reservation is confirmed.</p>
+            <ul>
+              <li><strong>Exam:</strong> {exam_info['exam_title']}</li>
+              <li><strong>Date:</strong> {exam_date_str}</li>
+              <li><strong>Time:</strong> {start_time}–{end_time}</li>
+              <li><strong>Location:</strong> {full_location}</li>
+            </ul>
+            <p>If you need to cancel or reschedule, please log into the Exam Registration System.</p>
+        """
 
-    info = {
-        "confirmation_code": reg["registration_id"],
-        "exam_title": reg["exam_title"],
-        "exam_date": reg["exam_date"],
-        "professor_name": reg["professor_name"],
-        "start_time": reg["start_time"],
-        "end_time": reg["end_time"],
-        "full_location": f"{reg['campus']} – {reg['building']}, Room {reg['room']}",
-        "was_reschedule": is_reschedule
-    }
+        print("🔥 DEBUG: sending confirmation email to", current_user.email)
 
-    return render_template("confirm_success.html", info=info)
+
+        send_exam_confirmation(
+            to_email=current_user.email,
+            subject="CSN Exam Reservation Confirmation",
+            html_body=html_body,
+        )
+
+    flash("Your exam appointment has been scheduled!", "success")
+    return redirect(url_for("student_ui.student_appointments"))
 
 
 # =====================================================================
@@ -471,3 +486,4 @@ def student_appointments():
         max_allowed=max_allowed,
         remaining_slots=remaining_slots,
     )
+

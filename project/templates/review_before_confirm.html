@@ -14,6 +14,18 @@
 
     </div>
 
+    <p class="email-note" style="
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #eef8ff;
+    border-left: 4px solid #0077cc;
+    border-radius: 4px;
+    color: #003d66;
+    ">
+    An email confirmation will be sent upon submittal.
+    </p>
+
+
     <form method="POST" action="{{ url_for('student_ui.confirm_final') }}" style="margin-top:20px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() | default('') }}">
 

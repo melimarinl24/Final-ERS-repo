@@ -1,6 +1,6 @@
 print(">>> LOADED: views.py blueprint <<<")
 
-from flask import Blueprint, render_template, jsonify, current_app, redirect, url_for, request, flash
+from flask import Blueprint, render_template, jsonify, current_app, redirect, url_for, request, flash, send_from_directory
 from flask_login import login_required, current_user
 from . import db
 from sqlalchemy import text
@@ -18,6 +18,14 @@ def home():
         # If a form accidentally posts to '/', bounce it to login (or wherever makes sense)
         return redirect(url_for('auth.login'))
     return render_template('home.html')
+
+@bp.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(current_app.root_path, 'static', 'images'),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
 
 
 @bp.route('/dashboard')
